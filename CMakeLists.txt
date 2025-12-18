@@ -23,7 +23,7 @@ FetchContent_MakeAvailable(glm)
 find_package(OpenGL REQUIRED)
 
 set( HEADER_FILES
-	# headers
+	./include/${PROJECT_NAME}/ogl.h
 )
 
 set( SOURCE_FILES
@@ -35,6 +35,8 @@ add_executable (GLUTTest
 	${HEADER_FILES}
 	${SOURCE_FILES}
 )
+
+target_include_directories(GLUTTest PUBLIC include)
 
 target_link_libraries(GLUTTest PUBLIC freeglut glm::glm)
 target_include_directories(GLUTTest PUBLIC ${freeglut_SOURCE_DIR}/include)
