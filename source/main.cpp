@@ -18,6 +18,8 @@ constexpr auto speed_left  = 10;
 constexpr auto speed_right = 10;
 
 glm::vec2 view_position{0, 0};
+double view_angle{0};
+double view_scale{1};
 
 class Shape
 {
@@ -230,15 +232,37 @@ void display()
 {
 	glClearColor(1.f, 1.f, 1.f, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
+
+	
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(
+		-world_width/2., +world_width/2.,
+		-world_height/2., +world_height/2.
+	);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	glScalef(view_scale, view_scale, 1);
 	glTranslatef(view_position.x, view_position.y, 0);
+	glRotatef(view_angle, 0, 0, 1);
+	// World
+
 
 	for (auto&& shape : shapes)
-	{
 		shape->draw();
-	}
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0, win_width, win_height, 0);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	// UI
+	Button btn("Test text");
+	btn.draw();
+
+
 
 	//btn.draw();
 
@@ -269,16 +293,6 @@ void keyboard(const unsigned char key, const int x, const int y)
 	glutPostRedisplay();
 }
 
-void mouse_handler(int button, int state, int x, int y)
-{
-	switch (button)
-	{
-	case GLUT_LEFT_BUTTON:
-		// if (btn.test(x, y))
-		// 	btn.click();
-		break;
-	}
-}
 
 void timer_create(int)
 {	
@@ -296,6 +310,50 @@ void timer_create(int)
 	glutTimerFunc(20, timer_create, 0);
 }
 
+void handler_mouse_wheel(int wheel, int dir, int x, int y)
+{
+	if (dir > 0)
+		view_scale *= 1.1;
+	else if(dir < 0)
+		view_scale /= 1.1;
+}
+
+bool is_dragged = false;
+glm::vec2 last_mouse_pos;
+
+void mouse_handler(const int button, const int state, const int x, const int y)
+{
+	if (button == GLUT_LEFT_BUTTON)
+	{
+		if (state == GLUT_DOWN)
+		{
+			is_dragged = true;
+			last_mouse_pos = { x, y };
+		}
+		else if (state == GLUT_UP)
+			is_dragged = false;
+	}
+}
+
+void handler_mouse_move(int x, int y)
+{
+	if (!is_dragged)
+		return;
+
+	printf("dragged\r\n");
+	const glm::vec2 delta = last_mouse_pos - glm::vec2{ x, y };
+	constexpr int sense = 1;
+	const glm::vec2 delta_world = delta / ((float)view_scale * sense);
+
+	const glm::vec2 new_position = {
+		view_position.x + delta_world.x/* / world_width */,
+		view_position.y - delta_world.y/* / world_height*/
+	};
+	view_position = new_position;
+
+	last_mouse_pos = { x, y };
+}
+
 int main(int argc, char** argv)
 {
 	srand(time(0));
@@ -306,19 +364,13 @@ int main(int argc, char** argv)
 	glutInitWindowSize(win_width, win_height);
 	glutCreateWindow("GLUTTest");
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	//gluOrtho2D(0, win_width/win_scale, win_height/win_scale, 0);
-	gluOrtho2D(
-		-world_width, +world_width, 
-		-world_height, +world_height
-		);
-
 	
 
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboard);
 	glutMouseFunc(mouse_handler);
+	glutMotionFunc(handler_mouse_move);
+	glutMouseWheelFunc(handler_mouse_wheel);
 	glutTimerFunc(50, timer_create, 0);
 
 
